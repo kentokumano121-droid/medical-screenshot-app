@@ -42,34 +42,80 @@ st.markdown("NotebookLMで作成したQ&Aスクショを読み込み、Geminiで
 # --- カスタムデザイン（CSS）の適用 ---
 st.markdown("""
     <style>
-    /* 全体の背景やフォントの微調整 */
-    .main {
-        background-color: #fcfdfe;
+    /* 1. Streamlit特有のヘッダー、フッター、メニューを隠してアプリ化 */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* 2. 背景色をiPadのシステムライクな上品なライトグレーに */
+    .stApp {
+        background-color: #F2F2F7;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
-    /* タイトル部分の装飾 */
+    
+    /* 3. タイトルをスッキリさせる */
     h1 {
-        color: #1e3a8a;
-        font-weight: 800;
-        border-bottom: 3px solid #3b82f6;
-        padding-bottom: 10px;
+        color: #1C1C1E !important;
+        text-align: center;
+        font-size: 1.8rem !important;
+        font-weight: 700 !important;
+        padding-top: 1rem !important;
+        padding-bottom: 2rem !important;
     }
-    /* ボタンの角を丸くし、ホバー時のエフェクトを追加 */
-    div.stButton > button {
-        border-radius: 20px !important;
-        font-weight: bold !important;
+    
+    /* 4. アップロードエリアをGoodnotesのノート風に柔らかく */
+    div[data-testid="stFileUploadDropzone"] {
+        background-color: #FFFFFF;
+        border: 2px dashed #007AFF;
+        border-radius: 20px;
+        padding: 2rem;
         transition: all 0.3s ease;
     }
-    /* フォームや確認エリアをカード風に囲う */
+    div[data-testid="stFileUploadDropzone"]:hover {
+        background-color: #F0F8FF;
+    }
+    
+    /* 5. 実行ボタンをiOSの純正アプリ風（青グラデーション）に */
+    div.stButton > button[kind="primary"] {
+        background: linear-gradient(180deg, #47A1FF 0%, #007AFF 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 14px !important;
+        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3) !important;
+        font-weight: 600 !important;
+        padding: 0.6rem 1.2rem !important;
+        transition: transform 0.1s;
+    }
+    div.stButton > button[kind="primary"]:active {
+        transform: scale(0.96);
+    }
+    
+    /* 6. クリアボタン（セカンダリ）は主張しすぎないグレー＆赤文字に */
+    div.stButton > button[kind="secondary"] {
+        background: #E5E5EA !important;
+        color: #FF3B30 !important;
+        border: none !important;
+        border-radius: 14px !important;
+        box-shadow: none !important;
+        font-weight: 600 !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    /* 7. 確認用のフォーム全体を白浮きカード風（すりガラス効果）に */
     div[data-testid="stForm"] {
-        background-color: #ffffff !important;
-        border: 1px solid #e5e7eb !important;
-        border-radius: 16px !important;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+        background-color: rgba(255, 255, 255, 0.8) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.5) !important;
+        border-radius: 24px !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
         padding: 24px !important;
     }
-    /* サイドバーの背景色変更 */
-    section[data-testid="stSidebar"] {
-        background-color: #f3f4f6;
+    
+    /* 8. テキスト入力欄の角を丸く */
+    div[data-baseweb="input"] > div {
+        border-radius: 10px !important;
+        background-color: #F2F2F7 !important;
+        border: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
