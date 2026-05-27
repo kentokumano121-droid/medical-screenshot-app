@@ -19,7 +19,12 @@ class ThemeList(BaseModel):
 
 # --- ヘルパー関数 ---
 def get_api_key():
-    """環境変数またはStreamlit SecretsからAPIキーを取得"""
+    """入力欄、環境変数、またはStreamlit SecretsからAPIキーを取得"""
+    # 1. 画面の入力欄に文字が入っていればそれを最優先で使う
+    if input_api_key:
+        return input_api_key
+        
+    # 2. それ以外は環境変数やSecretsを探す（予備）
     api_key = os.environ.get("GEMINI_API_KEY")
     if api_key:
         return api_key
@@ -33,6 +38,14 @@ st.set_page_config(page_title="スクショ自動PDF化アプリ", layout="cente
 
 st.title("🩺 学習用スクショ自動PDF化＆振り分け")
 st.markdown("NotebookLMで作成したQ&Aスクショを読み込み、Geminiで自動分類してPDF化します。")
+
+# --- 画面上でAPIキーを入力できる欄を設置 ---
+st.sidebar.header("🔑 初期設定")
+input_api_key = st.sidebar.text_input(
+    "Gemini APIキーを入力してください", 
+    type="password", 
+    help="AI Studioで取得した AIzaSy... から始まるキーを入力してください。"
+)
 
 # --- セッションステートの初期化 ---
 if "results" not in st.session_state:
