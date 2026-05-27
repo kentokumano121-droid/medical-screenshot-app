@@ -39,6 +39,41 @@ st.set_page_config(page_title="スクショ自動PDF化アプリ", layout="cente
 st.title("🩺 学習用スクショ自動PDF化＆振り分け")
 st.markdown("NotebookLMで作成したQ&Aスクショを読み込み、Geminiで自動分類してPDF化します。")
 
+# --- カスタムデザイン（CSS）の適用 ---
+st.markdown("""
+    <style>
+    /* 全体の背景やフォントの微調整 */
+    .main {
+        background-color: #fcfdfe;
+    }
+    /* タイトル部分の装飾 */
+    h1 {
+        color: #1e3a8a;
+        font-weight: 800;
+        border-bottom: 3px solid #3b82f6;
+        padding-bottom: 10px;
+    }
+    /* ボタンの角を丸くし、ホバー時のエフェクトを追加 */
+    div.stButton > button {
+        border-radius: 20px !important;
+        font-weight: bold !important;
+        transition: all 0.3s ease;
+    }
+    /* フォームや確認エリアをカード風に囲う */
+    div[data-testid="stForm"] {
+        background-color: #ffffff !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 16px !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+        padding: 24px !important;
+    }
+    /* サイドバーの背景色変更 */
+    section[data-testid="stSidebar"] {
+        background-color: #f3f4f6;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # --- 画面上でAPIキーを入力できる欄を設置 ---
 st.sidebar.header("🔑 初期設定")
 input_api_key = st.sidebar.text_input(
@@ -52,16 +87,27 @@ if "results" not in st.session_state:
     st.session_state.results = None
 if "zip_bytes" not in st.session_state:
     st.session_state.zip_bytes = None
+if "uploader_key" not in st.session_state:
+    st.session_state.uploader_key = 0
 
 # ==========================================
 # フェーズ1: 画像アップロード
 # ==========================================
+# データが存在するときだけ一括削除ボタンを表示
+if st.session_state.results or uploaded_files:
+    if st.button("🗑️ アップロード画像と結果をすべてクリア", type="secondary", use_container_width=True):
+        st.session_state.results = None
+        st.session_state.zip_bytes = None
+        st.session_state.uploader_key += 1 # キーを増やすことでアップローダーを強制リセット
+        st. those = None
+        st.rerun()
+
 uploaded_files = st.file_uploader(
     "スクリーンショットをアップロード（複数選択可）", 
     accept_multiple_files=True, 
-    type=["png", "jpg", "jpeg", "webp"]
+    type=["png", "jpg", "jpeg", "webp"],
+    key=f"uploader_{st.session_state.uploader_key}" # 動的キーを適用
 )
-
 # ==========================================
 # フェーズ2: AIによるタイトル抽出と自動ルビ振り
 # ==========================================
