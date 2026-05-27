@@ -92,20 +92,28 @@ if uploaded_files:
             各画像について主題（〇〇の部分）を抽出し、その読み仮名の先頭カタカナ1文字を付与したファイル名（例：ア_アジソン病、ハ_橋本病）を作成してください。
 
             重要なルール：
-            1. 連続する画像が同じ主題について説明している場合（前の画像からの続きなど）、必ず「全く同じファイル名」を出力してください。これにより後で1つのPDFに結合されます。
-            2. 画像内に明確な質問文がない場合でも、内容から最も適切な医学用語・主題を推測し、ファイル名を作成してください。
-            3. 出力は指定されたJSONスキーマに従ってください。
+            1. 各画像の前には「画像インデックス: X」というテキストを付与して渡しています。JSON出力の image_index にはこのXの数値を正確に指定してください。
+            2. 画像は全部で複数枚あります。0番から最後の画像まで「1枚も漏らさずに」すべての画像に対して結果を出力してください。
+            3. 連続する画像が同じ主題について説明している場合（前の画像からの続きなど）、必ず「全く同じファイル名」を出力してください。これにより後で1つのPDFに結合されます。
+            4. 画像内に明確な質問文がない場合（解説の続きのページなど）でも、前後の文脈や内容から最も適切な医学用語・主題を推測し、ファイル名を作成してください。
             """
+            
+            # 【修正ポイント】画像と名札（テキスト）を交互にリストに格納する
+            contents = []
+            for i, img in enumerate(images):
+                contents.append(f"画像インデックス: {i}")
+                contents.append(img)
+            contents.append(prompt)
             
             try:
                 # Gemini API (Structured Outputs) 呼び出し
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
-                    contents=images + [prompt],
+                    contents=contents, # 修正したリストを渡す
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
                         response_schema=ThemeList,
-                        temperature=0.1, # 安定した抽出のため低めに設定
+                        temperature=0.0, # ズレを徹底的に防ぐため、より決定論的（0.0）にする
                     )
                 )
                 
