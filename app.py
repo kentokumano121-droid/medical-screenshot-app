@@ -34,99 +34,117 @@ def get_api_key():
         return None
 
 # --- アプリの基本設定 ---
-st.set_page_config(page_title="スクショ自動PDF化アプリ", layout="centered", page_icon="🩺")
+st.set_page_config(page_title="SnapBrief", layout="centered", page_icon="🩺")
 
-st.title("🩺 学習用スクショ自動PDF化＆振り分け")
-st.markdown("NotebookLMで作成したQ&Aスクショを読み込み、Geminiで自動分類してPDF化します。")
-
-# --- カスタムデザイン（CSS）の適用 ---
+# --- カスタムレイアウト ＆ 圧倒的モダンCSSの適用 ---
 st.markdown("""
     <style>
-    /* 1. Streamlit特有のヘッダー、フッター、メニューを隠してアプリ化 */
+    /* 1. 不要なメニューの非表示（サイドバーボタンを巻き添えにしないよう修正） */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
     
-    /* 2. 背景色をiPadのシステムライクな上品なライトグレーに */
+    /* 2. 背景をApple風のクリーンな超淡いグレーに */
     .stApp {
-        background-color: #F2F2F7;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #F8F9FA;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
     
-    /* 3. タイトルをスッキリさせる */
-    h1 {
-        color: #1C1C1E !important;
-        text-align: center;
-        font-size: 1.8rem !important;
-        font-weight: 700 !important;
-        padding-top: 1rem !important;
-        padding-bottom: 2rem !important;
+    /* 3. ヘッダーを左上にスタイリッシュに配置（業務用感を排除） */
+    .custom-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 0;
+        border-bottom: 1px solid #E5E7EB;
+        margin-bottom: 2rem;
+    }
+    .app-title {
+        font-size: 1.4rem !important;
+        font-weight: 800 !important;
+        color: #1F2937;
+        letter-spacing: -0.05em;
+    }
+    .app-subtitle {
+        font-size: 0.85rem;
+        color: #6B7280;
     }
     
-    /* 4. アップロードエリアをGoodnotesのノート風に柔らかく */
+    /* 4. アップロードエリアをミニマルに */
     div[data-testid="stFileUploadDropzone"] {
-        background-color: #FFFFFF;
-        border: 2px dashed #007AFF;
-        border-radius: 20px;
-        padding: 2rem;
-        transition: all 0.3s ease;
-    }
-    div[data-testid="stFileUploadDropzone"]:hover {
-        background-color: #F0F8FF;
+        background-color: #FFFFFF !important;
+        border: 1px dashed #D1D5DB !important;
+        border-radius: 16px !important;
+        padding: 2.5rem !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
     }
     
-    /* 5. 実行ボタンをiOSの純正アプリ風（青グラデーション）に */
+    /* 5. 各種ボタンを「フラットで高品質なタブ風」デザインに */
+    div.stButton > button {
+        border-radius: 12px !important;
+        padding: 0.6rem 1.5rem !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        transition: all 0.2s ease !important;
+    }
+    /* メインボタン（青） */
     div.stButton > button[kind="primary"] {
-        background: linear-gradient(180deg, #47A1FF 0%, #007AFF 100%) !important;
+        background-color: #007AFF !important;
+        border: none !important;
         color: white !important;
-        border: none !important;
-        border-radius: 14px !important;
-        box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3) !important;
-        font-weight: 600 !important;
-        padding: 0.6rem 1.2rem !important;
-        transition: transform 0.1s;
+        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2) !important;
     }
-    div.stButton > button[kind="primary"]:active {
-        transform: scale(0.96);
+    div.stButton > button[kind="primary"]:hover {
+        background-color: #0062CC !important;
+        box-shadow: 0 6px 16px rgba(0, 122, 255, 0.3) !important;
     }
-    
-    /* 6. クリアボタン（セカンダリ）は主張しすぎないグレー＆赤文字に */
+    /* 削除・セカンダリボタン（フラットグレー） */
     div.stButton > button[kind="secondary"] {
-        background: #E5E5EA !important;
-        color: #FF3B30 !important;
-        border: none !important;
-        border-radius: 14px !important;
-        box-shadow: none !important;
-        font-weight: 600 !important;
-        margin-bottom: 1rem !important;
+        background-color: #F3F4F6 !important;
+        border: 1px solid #E5E7EB !important;
+        color: #4B5563 !important;
+    }
+    div.stButton > button[kind="secondary"]:hover {
+        background-color: #E5E7EB !important;
+        color: #1F2937 !important;
     }
     
-    /* 7. 確認用のフォーム全体を白浮きカード風（すりガラス効果）に */
+    /* 6. 人間確認フォーム（すりガラス・極薄シャドウカード） */
     div[data-testid="stForm"] {
-        background-color: rgba(255, 255, 255, 0.8) !important;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.5) !important;
-        border-radius: 24px !important;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
-        padding: 24px !important;
+        background-color: #FFFFFF !important;
+        border: 1px solid #E5E7EB !important;
+        border-radius: 20px !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
+        padding: 2rem !important;
+        margin-top: 2rem;
     }
     
-    /* 8. テキスト入力欄の角を丸く */
-    div[data-baseweb="input"] > div {
-        border-radius: 10px !important;
-        background-color: #F2F2F7 !important;
-        border: none !important;
+    /* 7. キー入力開閉パネル（Expander）を馴染ませる */
+    .stExpander {
+        background-color: #FFFFFF !important;
+        border: 1px solid #E5E7EB !important;
+        border-radius: 12px !important;
+        margin-bottom: 1.5rem !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.01) !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 画面上でAPIキーを入力できる欄を設置 ---
-st.sidebar.header("🔑 初期設定")
-input_api_key = st.sidebar.text_input(
-    "Gemini APIキーを入力してください", 
-    type="password", 
-    help="AI Studioで取得した AIzaSy... から始まるキーを入力してください。"
-)
+# --- 独自ヘッダーの描画（ダサい中央タイトルを廃止） ---
+st.markdown("""
+    <div class="custom-header">
+        <div class="app-title">🩺 SnapBrief</div>
+        <div class="app-subtitle">NotebookLM スクショ自動分類・PDF結合ツール</div>
+    </div>
+""", unsafe_allow_html=True)
+
+# --- 画面上部にスマートに格納されたAPIキー設定欄 ---
+with st.expander("🔑 API Key 設定 (最初に一度入力してください)"):
+    input_api_key = st.text_input(
+        "Gemini APIキー", 
+        type="password", 
+        placeholder="AIzaSy...",
+        help="Google AI Studioで取得したキーを入力してください。"
+    )
 
 # --- セッションステートの初期化 ---
 if "results" not in st.session_state:
