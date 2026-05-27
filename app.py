@@ -93,21 +93,23 @@ if "uploader_key" not in st.session_state:
 # ==========================================
 # フェーズ1: 画像アップロード
 # ==========================================
-# データが存在するときだけ一括削除ボタンを表示
-if st.session_state.results or uploaded_files:
-    if st.button("🗑️ アップロード画像と結果をすべてクリア", type="secondary", use_container_width=True):
-        st.session_state.results = None
-        st.session_state.zip_bytes = None
-        st.session_state.uploader_key += 1 # キーを増やすことでアップローダーを強制リセット
-        st. those = None
-        st.rerun()
-
+# ① まずアップローダーを画面に配置する（ここで uploaded_files が定義される）
 uploaded_files = st.file_uploader(
     "スクリーンショットをアップロード（複数選択可）", 
     accept_multiple_files=True, 
     type=["png", "jpg", "jpeg", "webp"],
     key=f"uploader_{st.session_state.uploader_key}" # 動的キーを適用
 )
+
+# ② アップローダーの下に一括削除ボタンを配置する
+# （uploaded_files が定義された後なのでエラーになりません）
+if st.session_state.results or uploaded_files:
+    if st.button("🗑️ アップロード画像と結果をすべてクリア", type="secondary", use_container_width=True):
+        st.session_state.results = None
+        st.session_state.zip_bytes = None
+        st.session_state.uploader_key += 1 # キーを増やすことでアップローダーを強制リセット
+        st.rerun() # 画面をリロードして状態をリセット
+        
 # ==========================================
 # フェーズ2: AIによるタイトル抽出と自動ルビ振り
 # ==========================================
