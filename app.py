@@ -206,13 +206,19 @@ if st.session_state.results:
             st.session_state.zip_bytes = zip_buffer.getvalue()
             st.success("🎉 すべてのPDF化とZIP圧縮が完了しました！")
 
+import base64 # ※もしファイル上部の import 群になければ追記してください
+
 # ZIPデータが存在する場合はダウンロードボタンを表示
 if st.session_state.zip_bytes:
-    st.download_button(
-        label="📥 ZIPファイルをダウンロードして「ファイル」に保存",
-        data=st.session_state.zip_bytes,
-        file_name="Goodnotes_Import.zip",
-        mime="application/zip",
-        type="primary",
-        use_container_width=True
-    )
+    st.divider()
+    
+    # ZIPデータをBase64エンコードして、別タブで開くカスタムリンクを作成
+    b64 = base64.b64encode(st.session_state.zip_bytes).decode()
+    href = f'''
+    <a href="data:application/zip;base64,{b64}" download="Goodnotes_Import.zip" target="_blank" 
+       style="display: block; text-align: center; padding: 0.5em 1em; color: white; background-color: #FF4B4B; text-decoration: none; border-radius: 0.5rem; font-weight: bold; margin-bottom: 10px;">
+       📥 ZIPファイルをダウンロード（別タブで開きます）
+    </a>
+    '''
+    st.markdown(href, unsafe_allow_html=True)
+    st.info("💡 ダウンロード画面が開いたら、保存後にそのタブを閉じることで、この画面（APIキーなどの状態）を維持したまま作業を続けられます。")
