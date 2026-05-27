@@ -74,6 +74,41 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- カスタムデザイン（CSS）の適用 ---
+st.markdown("""
+    <style>
+    /* 全体の背景やフォントの微調整 */
+    .main {
+        background-color: #fcfdfe;
+    }
+    /* タイトル部分の装飾 */
+    h1 {
+        color: #1e3a8a;
+        font-weight: 800;
+        border-bottom: 3px solid #3b82f6;
+        padding-bottom: 10px;
+    }
+    /* ボタンの角を丸くし、ホバー時のエフェクトを追加 */
+    div.stButton > button {
+        border-radius: 20px !important;
+        font-weight: bold !important;
+        transition: all 0.3s ease;
+    }
+    /* フォームや確認エリアをカード風に囲う */
+    div[data-testid="stForm"] {
+        background-color: #ffffff !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 16px !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+        padding: 24px !important;
+    }
+    /* サイドバーの背景色変更 */
+    section[data-testid="stSidebar"] {
+        background-color: #f3f4f6;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # --- 画面上でAPIキーを入力できる欄を設置 ---
 st.sidebar.header("🔑 初期設定")
 input_api_key = st.sidebar.text_input(
