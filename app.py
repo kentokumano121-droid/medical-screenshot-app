@@ -179,21 +179,23 @@ if st.session_state.results or uploaded_files:
 # ==========================================
 if uploaded_files:
     if st.button("AIでタイトルとルビを自動抽出", type="primary"):
-        with st.spinner("Gemini APIで画像を解析中...（枚数が多いと数秒〜数十秒かかります）"):
+        # st.statusを使って、進行状況をユーザーに分かりやすく表示
+        with st.status("🤖 AIで画像を解析中...", expanded=True) as status:
             
-            # ファイル名順（アップロード順）にソート
+            st.write("📂 画像を整理・最適化しています...")
             uploaded_files.sort(key=lambda x: x.name)
             
-            # Pillow Imageリスト作成（iOS特有のEXIF回転情報も補正）
             images = []
             for f in uploaded_files:
                 img = Image.open(f)
                 img = ImageOps.exif_transpose(img)
+                # 【改善ポイント】画像を縮小してメモリ不足エラーとタイムアウトを防ぐ
+                img.thumbnail((1024, 1024)) 
                 images.append(img)
             
             api_key = get_api_key()
             if not api_key:
-                st.error("APIキーが設定されていません。`.env` または Streamlitの `Secrets` に `GEMINI_API_KEY` を設定してください。")
+                st.error("APIキーが設定されていません。")
                 st.stop()
             
             client = genai.Client(api_key=api_key)
@@ -207,10 +209,9 @@ if uploaded_files:
             1. 各画像の前には「画像インデックス: X」というテキストを付与して渡しています。JSON出力の image_index にはこのXの数値を正確に指定してください。
             2. 画像は全部で複数枚あります。0番から最後の画像まで「1枚も漏らさずに」すべての画像に対して結果を出力してください。
             3. 連続する画像が同じ主題について説明している場合（前の画像からの続きなど）、必ず「全く同じファイル名」を出力してください。これにより後で1つのPDFに結合されます。
-            4. 画像内に明確な質問文がない場合（解説の続きのページなど）でも、前後の文脈や内容から最も適切な医学用語・主題を推測し、ファイル名を作成してください。
+            4. 画像内に明確な質問文がない場合でも、前後の文脈や内容から最も適切な医学用語・主題を推測し、ファイル名を作成してください。
             """
             
-            # 【修正ポイント】画像と名札（テキスト）を交互にリストに格納する
             contents = []
             for i, img in enumerate(images):
                 contents.append(f"画像インデックス: {i}")
@@ -218,24 +219,22 @@ if uploaded_files:
             contents.append(prompt)
             
             try:
-                # Gemini API (Structured Outputs) 呼び出し
+                st.write("☁️ Geminiにデータを送信・解析中です（数秒〜数十秒お待ちください）...")
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
-                    contents=contents, # 修正したリストを渡す
+                    contents=contents,
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
                         response_schema=ThemeList,
-                        temperature=0.0, # ズレを徹底的に防ぐため、より決定論的（0.0）にする
+                        temperature=0.0,
                     )
                 )
                 
-                # Pydanticモデルで検証・パース
                 theme_list = ThemeList.model_validate_json(response.text)
                 
                 results = []
                 for i, img in enumerate(images):
                     file_name = f"未分類_{i}"
-                    # 対応するインデックスの推測ファイル名を探す
                     matched = next((t for t in theme_list.themes if t.image_index == i), None)
                     if matched:
                         file_name = matched.file_name
@@ -246,14 +245,16 @@ if uploaded_files:
                         "original_name": uploaded_files[i].name
                     })
                 
-                # 状態を保存してリロード
                 st.session_state.results = results
                 st.session_state.zip_bytes = None 
-                st.success("解析が完了しました！下で内容を確認・修正してください。")
+                
+                # 処理が完了したらステータスを緑色のチェックマークに変更
+                status.update(label="解析が完了しました！下の項目を確認してください。", state="complete", expanded=False)
                 
             except Exception as e:
-                st.error(f"エラーが発生しました: {e}")
-
+                status.update(label="エラーが発生しました", state="error", expanded=True)
+                st.error(f"詳細なエラー内容: {e}")
+                
 # ==========================================
 # フェーズ3: Human-in-the-Loop（確認と修正）
 # ==========================================
