@@ -179,19 +179,24 @@ if st.session_state.results or uploaded_files:
 # ==========================================
 if uploaded_files:
     if st.button("AIでタイトルとルビを自動抽出", type="primary"):
-        # st.statusを使って、進行状況をユーザーに分かりやすく表示
         with st.status("🤖 AIで画像を解析中...", expanded=True) as status:
             
-            st.write("📂 画像を整理・最適化しています...")
+            st.write("📂 画像を読み込んでいます...")
             uploaded_files.sort(key=lambda x: x.name)
             
-            images = []
+            original_images = []
+            api_images = []
+            
             for f in uploaded_files:
                 img = Image.open(f)
                 img = ImageOps.exif_transpose(img)
-                # 【改善ポイント】画像を縮小してメモリ不足エラーとタイムアウトを防ぐ
-                img.thumbnail((1024, 1024)) 
-                images.append(img)
+                # PDF結合用として、元の高画質画像を保存
+                original_images.append(img) 
+                
+                # 【改善】Gemini API送信用の軽量化コピー（エラー・タイムアウト回避用）
+                img_api = img.copy()
+                img_api.thumbnail((1024, 1024)) 
+                api_images.append(img_api)
             
             api_key = get_api_key()
             if not api_key:
@@ -200,22 +205,26 @@ if uploaded_files:
             
             client = genai.Client(api_key=api_key)
             
+            # 【改善】プロンプトを修正し、文節での区切りを禁止
             prompt = """
             あなたは医学生の学習ノート整理アシスタントです。
             提供された複数のスクリーンショット画像には、NotebookLMで生成された「〇〇について解説して。」などのQ&Aが含まれています。
-            各画像について主題（〇〇の部分）を抽出し、その読み仮名の先頭カタカナ1文字を付与したファイル名（例：ア_アジソン病、ハ_橋本病）を作成してください。
+            各画像について主題（〇〇の部分）を抽出し、その読み仮名の先頭カタカナ1文字を付与したファイル名を作成してください。
 
             重要なルール：
-            1. 各画像の前には「画像インデックス: X」というテキストを付与して渡しています。JSON出力の image_index にはこのXの数値を正確に指定してください。
-            2. 画像は全部で複数枚あります。0番から最後の画像まで「1枚も漏らさずに」すべての画像に対して結果を出力してください。
-            3. 連続する画像が同じ主題について説明している場合（前の画像からの続きなど）、必ず「全く同じファイル名」を出力してください。これにより後で1つのPDFに結合されます。
-            4. 画像内に明確な質問文がない場合でも、前後の文脈や内容から最も適切な医学用語・主題を推測し、ファイル名を作成してください。
+            1. 「〇〇」の部分は一切省略したり、文節で短く区切ったりせず、主題全体を完全に抽出してください。
+               (例) 画像に「急性心筋梗塞の治療フローについて解説して」とある場合、「キ_急性心筋梗塞」ではなく「キ_急性心筋梗塞の治療フロー」とする。
+            2. 各画像の前には「画像インデックス: X」というテキストを付与して渡しています。JSON出力の image_index にはこのXの数値を正確に指定してください。
+            3. 画像は全部で複数枚あります。0番から最後の画像まで「1枚も漏らさずに」すべての画像に対して結果を出力してください。
+            4. 連続する画像が同じ主題について説明している場合（前の画像からの続きなど）、必ず「全く同じファイル名」を出力してください。これにより後で1つのPDFに結合されます。
+            5. 画像内に明確な質問文がない場合でも、前後の文脈や内容から最も適切な医学用語・主題を推測し、ファイル名を作成してください。
             """
             
             contents = []
-            for i, img in enumerate(images):
+            # APIには軽量化した api_images を送る
+            for i, img_api in enumerate(api_images):
                 contents.append(f"画像インデックス: {i}")
-                contents.append(img)
+                contents.append(img_api)
             contents.append(prompt)
             
             try:
@@ -233,14 +242,15 @@ if uploaded_files:
                 theme_list = ThemeList.model_validate_json(response.text)
                 
                 results = []
-                for i, img in enumerate(images):
+                # ユーザーの画面表示やPDFには original_images (高画質) を使う
+                for i, img_orig in enumerate(original_images):
                     file_name = f"未分類_{i}"
                     matched = next((t for t in theme_list.themes if t.image_index == i), None)
                     if matched:
                         file_name = matched.file_name
                     
                     results.append({
-                        "image": img,
+                        "image": img_orig,
                         "file_name": file_name,
                         "original_name": uploaded_files[i].name
                     })
@@ -248,7 +258,6 @@ if uploaded_files:
                 st.session_state.results = results
                 st.session_state.zip_bytes = None 
                 
-                # 処理が完了したらステータスを緑色のチェックマークに変更
                 status.update(label="解析が完了しました！下の項目を確認してください。", state="complete", expanded=False)
                 
             except Exception as e:
