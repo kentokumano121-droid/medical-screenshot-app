@@ -135,13 +135,13 @@ st.markdown("""
 # --- 独自ヘッダーの描画 ---
 st.markdown("""
     <div class="custom-header">
-        <div class="app-title">🩺 SnapBrief</div>
+        <div class="app-title">SnapBrief</div>
         <div class="app-subtitle">Notes to PDF & ZIP</div>
     </div>
 """, unsafe_allow_html=True)
 
 # --- 画面上部にスマートに格納されたAPIキー設定欄 ---
-with st.expander("🔑 API Key 設定 (初回のみ)"):
+with st.expander("API Key 設定 (初回のみ)"):
     input_api_key = st.text_input(
         "Gemini APIキー", 
         type="password", 
@@ -168,7 +168,7 @@ uploaded_files = st.file_uploader(
 )
 
 if st.session_state.results or uploaded_files:
-    if st.button("🗑️ アップロード画像と結果をクリア", type="secondary", use_container_width=True):
+    if st.button("アップロード画像と結果をクリア", type="secondary", use_container_width=True):
         st.session_state.results = None
         st.session_state.zip_bytes = None
         st.session_state.uploader_key += 1 
@@ -178,10 +178,10 @@ if st.session_state.results or uploaded_files:
 # フェーズ2: AIによるタイトル抽出と自動ルビ振り
 # ==========================================
 if uploaded_files:
-    if st.button("✨ AIでタイトルとルビを自動抽出", type="primary", use_container_width=True):
-        with st.status("🤖 AIで画像を解析中...", expanded=True) as status:
+    if st.button("AIでタイトルとルビを自動抽出", type="primary", use_container_width=True):
+        with st.status("AIで画像を解析中...", expanded=True) as status:
             
-            st.write("📂 画像を読み込んでいます...")
+            st.write("画像を読み込んでいます...")
             uploaded_files.sort(key=lambda x: x.name)
             
             original_images = []
@@ -264,7 +264,7 @@ if uploaded_files:
 # ==========================================
 if st.session_state.results:
     st.divider()
-    st.subheader("📝 抽出結果の確認と修正")
+    st.subheader("抽出結果の確認と修正")
     
     with st.form("edit_form"):
         groups = defaultdict(list)
