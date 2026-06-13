@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import io
 import zipfile
+import base64
 from collections import defaultdict
 from PIL import Image, ImageOps
 
@@ -20,11 +21,9 @@ class ThemeList(BaseModel):
 # --- ヘルパー関数 ---
 def get_api_key():
     """入力欄、環境変数、またはStreamlit SecretsからAPIキーを取得"""
-    # 1. 画面の入力欄に文字が入っていればそれを最優先で使う
     if input_api_key:
         return input_api_key
         
-    # 2. それ以外は環境変数やSecretsを探す（予備）
     api_key = os.environ.get("GEMINI_API_KEY")
     if api_key:
         return api_key
@@ -36,109 +35,113 @@ def get_api_key():
 # --- アプリの基本設定 ---
 st.set_page_config(page_title="SnapBrief", layout="centered", page_icon="🩺")
 
-# --- カスタムレイアウト ＆ 圧倒的モダンCSSの適用 ---
+# --- iPad特化型 モダン・ダークモードCSSの適用 ---
 st.markdown("""
     <style>
-    /* 1. 不要なメニューの非表示（サイドバーボタンを巻き添えにしないよう修正） */
+    /* 1. 不要なメニューの非表示 */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* 2. 背景をApple風のクリーンな超淡いグレーに */
+    /* 2. 背景を漆黒（Apple Dark Mode風）に */
     .stApp {
-        background-color: #F8F9FA;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background-color: #000000;
+        color: #E5E5EA;
+        font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
     }
     
-    /* 3. ヘッダーを左上にスタイリッシュに配置（業務用感を排除） */
+    /* 3. 洗練されたヘッダー */
     .custom-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 1rem 0;
-        border-bottom: 1px solid #E5E7EB;
-        margin-bottom: 2rem;
+        padding: 1.5rem 0;
+        border-bottom: 1px solid #2C2C2E;
+        margin-bottom: 2.5rem;
     }
     .app-title {
-        font-size: 1.4rem !important;
+        font-size: 1.6rem !important;
         font-weight: 800 !important;
-        color: #1F2937;
-        letter-spacing: -0.05em;
+        color: #FFFFFF;
+        letter-spacing: -0.03em;
     }
     .app-subtitle {
-        font-size: 0.85rem;
-        color: #6B7280;
+        font-size: 0.9rem;
+        color: #8E8E93;
     }
     
-    /* 4. アップロードエリアをミニマルに */
+    /* 4. アップロードエリアをダーク＆ミニマルに */
     div[data-testid="stFileUploadDropzone"] {
-        background-color: #FFFFFF !important;
-        border: 1px dashed #D1D5DB !important;
-        border-radius: 16px !important;
-        padding: 2.5rem !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+        background-color: #1C1C1E !important;
+        border: 2px dashed #3A3A3C !important;
+        border-radius: 20px !important;
+        padding: 3.5rem 2rem !important;
+    }
+    div[data-testid="stFileUploadDropzone"] * {
+        color: #E5E5EA !important;
     }
     
-    /* 5. 各種ボタンを「フラットで高品質なタブ風」デザインに */
+    /* 5. iPadでのタップに最適化された巨大ボタン */
     div.stButton > button {
-        border-radius: 12px !important;
-        padding: 0.6rem 1.5rem !important;
+        border-radius: 16px !important;
+        padding: 0.8rem 1.5rem !important;
         font-weight: 600 !important;
-        font-size: 0.9rem !important;
+        font-size: 1.05rem !important;
+        min-height: 54px !important; /* タップ領域の確保 */
         transition: all 0.2s ease !important;
     }
-    /* メインボタン（青） */
+    /* メインボタン（ディープネイビー） */
     div.stButton > button[kind="primary"] {
-        background-color: #007AFF !important;
+        background-color: #0A5CFF !important;
         border: none !important;
-        color: white !important;
-        box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2) !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 4px 14px rgba(10, 92, 255, 0.3) !important;
     }
-    div.stButton > button[kind="primary"]:hover {
-        background-color: #0062CC !important;
-        box-shadow: 0 6px 16px rgba(0, 122, 255, 0.3) !important;
+    div.stButton > button[kind="primary"]:active {
+        transform: scale(0.98);
     }
-    /* 削除・セカンダリボタン（フラットグレー） */
+    /* クリア・削除ボタン（ダークブラウン/ウォームグレー系） */
     div.stButton > button[kind="secondary"] {
-        background-color: #F3F4F6 !important;
-        border: 1px solid #E5E7EB !important;
-        color: #4B5563 !important;
+        background-color: #2A2421 !important;
+        border: 1px solid #4A3C31 !important;
+        color: #D4C4B7 !important;
     }
-    div.stButton > button[kind="secondary"]:hover {
-        background-color: #E5E7EB !important;
-        color: #1F2937 !important;
-    }
-    
-    /* 6. 人間確認フォーム（すりガラス・極薄シャドウカード） */
-    div[data-testid="stForm"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #E5E7EB !important;
-        border-radius: 20px !important;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
-        padding: 2rem !important;
-        margin-top: 2rem;
+    div.stButton > button[kind="secondary"]:active {
+        transform: scale(0.98);
     }
     
-    /* 7. キー入力開閉パネル（Expander）を馴染ませる */
-    .stExpander {
-        background-color: #FFFFFF !important;
-        border: 1px solid #E5E7EB !important;
+    /* 6. フォームとExpander（カードUI） */
+    div[data-testid="stForm"], .stExpander {
+        background-color: #1C1C1E !important;
+        border: 1px solid #2C2C2E !important;
+        border-radius: 18px !important;
+    }
+    
+    /* 7. テキスト入力欄のダーク化 */
+    .stTextInput > div > div > input {
+        background-color: #2C2C2E !important;
+        color: #FFFFFF !important;
+        border: 1px solid #3A3A3C !important;
         border-radius: 12px !important;
-        margin-bottom: 1.5rem !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.01) !important;
+        padding: 0.7rem !important;
+    }
+    
+    /* 8. テキストの視認性確保 */
+    h1, h2, h3, h4, p, label {
+        color: #E5E5EA !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 独自ヘッダーの描画（ダサい中央タイトルを廃止） ---
+# --- 独自ヘッダーの描画 ---
 st.markdown("""
     <div class="custom-header">
         <div class="app-title">🩺 SnapBrief</div>
-        <div class="app-subtitle">NotebookLM スクショ自動分類・PDF結合ツール</div>
+        <div class="app-subtitle">Notes to PDF & ZIP</div>
     </div>
 """, unsafe_allow_html=True)
 
 # --- 画面上部にスマートに格納されたAPIキー設定欄 ---
-with st.expander("🔑 API Key 設定 (最初に一度入力してください)"):
+with st.expander("🔑 API Key 設定 (初回のみ)"):
     input_api_key = st.text_input(
         "Gemini APIキー", 
         type="password", 
@@ -157,28 +160,25 @@ if "uploader_key" not in st.session_state:
 # ==========================================
 # フェーズ1: 画像アップロード
 # ==========================================
-# ① まずアップローダーを画面に配置する（ここで uploaded_files が定義される）
 uploaded_files = st.file_uploader(
     "スクリーンショットをアップロード（複数選択可）", 
     accept_multiple_files=True, 
     type=["png", "jpg", "jpeg", "webp"],
-    key=f"uploader_{st.session_state.uploader_key}" # 動的キーを適用
+    key=f"uploader_{st.session_state.uploader_key}"
 )
 
-# ② アップローダーの下に一括削除ボタンを配置する
-# （uploaded_files が定義された後なのでエラーになりません）
 if st.session_state.results or uploaded_files:
-    if st.button("🗑️ アップロード画像と結果をすべてクリア", type="secondary", use_container_width=True):
+    if st.button("🗑️ アップロード画像と結果をクリア", type="secondary", use_container_width=True):
         st.session_state.results = None
         st.session_state.zip_bytes = None
-        st.session_state.uploader_key += 1 # キーを増やすことでアップローダーを強制リセット
-        st.rerun() # 画面をリロードして状態をリセット
+        st.session_state.uploader_key += 1 
+        st.rerun()
         
 # ==========================================
 # フェーズ2: AIによるタイトル抽出と自動ルビ振り
 # ==========================================
 if uploaded_files:
-    if st.button("AIでタイトルとルビを自動抽出", type="primary"):
+    if st.button("✨ AIでタイトルとルビを自動抽出", type="primary", use_container_width=True):
         with st.status("🤖 AIで画像を解析中...", expanded=True) as status:
             
             st.write("📂 画像を読み込んでいます...")
@@ -190,10 +190,8 @@ if uploaded_files:
             for f in uploaded_files:
                 img = Image.open(f)
                 img = ImageOps.exif_transpose(img)
-                # PDF結合用として、元の高画質画像を保存
                 original_images.append(img) 
                 
-                # 【改善】Gemini API送信用の軽量化コピー（エラー・タイムアウト回避用）
                 img_api = img.copy()
                 img_api.thumbnail((1024, 1024)) 
                 api_images.append(img_api)
@@ -205,7 +203,6 @@ if uploaded_files:
             
             client = genai.Client(api_key=api_key)
             
-            # 【改善】プロンプトを修正し、文節での区切りを禁止
             prompt = """
             あなたは医学生の学習ノート整理アシスタントです。
             提供された複数のスクリーンショット画像には、NotebookLMで生成された「〇〇について解説して。」などのQ&Aが含まれています。
@@ -221,14 +218,13 @@ if uploaded_files:
             """
             
             contents = []
-            # APIには軽量化した api_images を送る
             for i, img_api in enumerate(api_images):
                 contents.append(f"画像インデックス: {i}")
                 contents.append(img_api)
             contents.append(prompt)
             
             try:
-                st.write("☁️ Geminiにデータを送信・解析中です（数秒〜数十秒お待ちください）...")
+                st.write("☁️ Geminiにデータを送信・解析中です...")
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
                     contents=contents,
@@ -242,7 +238,6 @@ if uploaded_files:
                 theme_list = ThemeList.model_validate_json(response.text)
                 
                 results = []
-                # ユーザーの画面表示やPDFには original_images (高画質) を使う
                 for i, img_orig in enumerate(original_images):
                     file_name = f"未分類_{i}"
                     matched = next((t for t in theme_list.themes if t.image_index == i), None)
@@ -258,53 +253,63 @@ if uploaded_files:
                 st.session_state.results = results
                 st.session_state.zip_bytes = None 
                 
-                status.update(label="解析が完了しました！下の項目を確認してください。", state="complete", expanded=False)
+                status.update(label="解析が完了しました！", state="complete", expanded=False)
                 
             except Exception as e:
                 status.update(label="エラーが発生しました", state="error", expanded=True)
                 st.error(f"詳細なエラー内容: {e}")
                 
 # ==========================================
-# フェーズ3: Human-in-the-Loop（確認と修正）
+# フェーズ3: Human-in-the-Loop（グループごとの確認と修正）
 # ==========================================
 if st.session_state.results:
     st.divider()
     st.subheader("📝 抽出結果の確認と修正")
-    st.info("💡 ヒント: 同じファイル名になっている画像は、自動的に1つのPDFファイルとして結合されます。")
     
-    # st.formを使うことで、入力中の不意な画面リロードを防止（iOSでのUX向上）
     with st.form("edit_form"):
-        for i, item in enumerate(st.session_state.results):
-            col1, col2 = st.columns([1, 2], vertical_alignment="center")
-            with col1:
-                st.image(item["image"], use_container_width=True)
-            with col2:
-                # 各画像のファイル名を入力可能なテキストボックスとして表示
-                st.text_input(
-                    label=f"画像 {i+1} のファイル名", 
-                    value=item["file_name"], 
-                    key=f"name_{i}"
-                )
+        groups = defaultdict(list)
+        for item in st.session_state.results:
+            groups[item["file_name"]].append(item["image"])
+        
+        group_keys = list(groups.keys())
+        for i, ai_file_name in enumerate(group_keys):
+            images = groups[ai_file_name]
+            
+            st.markdown(f"#### 📦 {i+1}. {ai_file_name} ({len(images)}枚)")
+            
+            cols_per_row = 4
+            for row_start in range(0, len(images), cols_per_row):
+                cols = st.columns(cols_per_row)
+                for col_idx in range(cols_per_row):
+                    img_idx = row_start + col_idx
+                    if img_idx < len(images):
+                        with cols[col_idx]:
+                            st.image(images[img_idx], use_container_width=True)
+            
+            st.text_input(
+                label="ファイル名を修正", 
+                value=ai_file_name, 
+                key=f"group_name_{i}",
+                label_visibility="collapsed"
+            )
+            st.markdown("<br>", unsafe_allow_html=True)
         
         # ==========================================
         # フェーズ4: PDF生成とZIP圧縮
         # ==========================================
-        submitted = st.form_submit_button("✅ 確定してPDF化＆ZIP圧縮", type="primary")
+        st.markdown("<br>", unsafe_allow_html=True)
+        submitted = st.form_submit_button("✅ 確定してPDF化＆ZIP圧縮", type="primary", use_container_width=True)
 
     if submitted:
         with st.spinner("PDFを生成し、ZIPファイルに圧縮しています..."):
-            # 同じファイル名（修正後）の画像をグループ化
-            groups = defaultdict(list)
-            for i, item in enumerate(st.session_state.results):
-                updated_name = st.session_state[f"name_{i}"]
-                groups[updated_name].append(item["image"])
-            
-            # メモリ上でZIPファイルを作成
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-                for file_name, imgs in groups.items():
+                
+                for i, ai_file_name in enumerate(group_keys):
+                    final_name = st.session_state[f"group_name_{i}"]
+                    imgs = groups[ai_file_name]
+                    
                     pdf_images = []
-                    # PDF化のためにRGBA等のカラーモードをRGBに統一
                     for img in imgs:
                         if img.mode != 'RGB':
                             pdf_images.append(img.convert('RGB'))
@@ -313,34 +318,28 @@ if st.session_state.results:
                     
                     if pdf_images:
                         pdf_buffer = io.BytesIO()
-                        # Pillowの標準機能で1つにまとめたPDFを生成
                         pdf_images[0].save(
                             pdf_buffer, 
                             format="PDF", 
                             save_all=True, 
                             append_images=pdf_images[1:]
                         )
-                        # OS互換性を高めるためのファイル名サニタイズ
-                        safe_file_name = file_name.replace("/", "／").replace("\\", "＼")
+                        safe_file_name = final_name.replace("/", "／").replace("\\", "＼")
                         zf.writestr(f"{safe_file_name}.pdf", pdf_buffer.getvalue())
             
-            # 作成したZIPデータをセッションに保存
             st.session_state.zip_bytes = zip_buffer.getvalue()
-            st.success("🎉 すべてのPDF化とZIP圧縮が完了しました！")
-
-import base64 # ※もしファイル上部の import 群になければ追記してください
+            st.success("🎉 ZIP圧縮が完了しました！下のボタンからダウンロードしてください。")
 
 # ZIPデータが存在する場合はダウンロードボタンを表示
 if st.session_state.zip_bytes:
     st.divider()
     
-    # ZIPデータをBase64エンコードして、別タブで開くカスタムリンクを作成
     b64 = base64.b64encode(st.session_state.zip_bytes).decode()
+    # ダウンロードボタンもダークモードに合わせたスタイリッシュなブルーに
     href = f'''
     <a href="data:application/zip;base64,{b64}" download="Goodnotes_Import.zip" target="_blank" 
-       style="display: block; text-align: center; padding: 0.5em 1em; color: white; background-color: #FF4B4B; text-decoration: none; border-radius: 0.5rem; font-weight: bold; margin-bottom: 10px;">
-       📥 ZIPファイルをダウンロード（別タブで開きます）
+       style="display: block; text-align: center; padding: 1em; color: white; background-color: #0A5CFF; text-decoration: none; border-radius: 16px; font-size: 1.1rem; font-weight: 600; margin-bottom: 10px; box-shadow: 0 6px 16px rgba(10, 92, 255, 0.3); transition: all 0.2s ease;">
+       📥 ZIPファイルをダウンロード
     </a>
     '''
     st.markdown(href, unsafe_allow_html=True)
-    st.info("💡 ダウンロード画面が開いたら、保存後にそのタブを閉じることで、この画面（APIキーなどの状態）を維持したまま作業を続けられます。")
