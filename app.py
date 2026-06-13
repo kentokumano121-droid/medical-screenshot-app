@@ -298,7 +298,7 @@ if st.session_state.results:
         # フェーズ4: PDF生成とZIP圧縮
         # ==========================================
         st.markdown("<br>", unsafe_allow_html=True)
-        submitted = st.form_submit_button("✅ 確定してPDF化＆ZIP圧縮", type="primary", use_container_width=True)
+        submitted = st.form_submit_button("確定してPDF化＆ZIP圧縮", type="primary", use_container_width=True)
 
     if submitted:
         with st.spinner("PDFを生成し、ZIPファイルに圧縮しています..."):
@@ -328,7 +328,7 @@ if st.session_state.results:
                         zf.writestr(f"{safe_file_name}.pdf", pdf_buffer.getvalue())
             
             st.session_state.zip_bytes = zip_buffer.getvalue()
-            st.success("🎉 ZIP圧縮が完了しました！下のボタンからダウンロードしてください。")
+            st.success("ZIP圧縮が完了しました。下のボタンからダウンロードしてください。")
 
 # ZIPデータが存在する場合はダウンロードボタンを表示
 if st.session_state.zip_bytes:
@@ -339,7 +339,7 @@ if st.session_state.zip_bytes:
     href = f'''
     <a href="data:application/zip;base64,{b64}" download="Goodnotes_Import.zip" target="_blank" 
        style="display: block; text-align: center; padding: 1em; color: white; background-color: #0A5CFF; text-decoration: none; border-radius: 16px; font-size: 1.1rem; font-weight: 600; margin-bottom: 10px; box-shadow: 0 6px 16px rgba(10, 92, 255, 0.3); transition: all 0.2s ease;">
-       📥 ZIPファイルをダウンロード
+       ZIPファイルをダウンロード
     </a>
     '''
     st.markdown(href, unsafe_allow_html=True)
